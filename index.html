@@ -419,8 +419,8 @@
             seedData: function() {
                 this.data.users = [
                     { id: 1, firstName: 'Admin', lastName: 'System', email: 'admin@gabonjob.com', password: 'Admin@2025', role: 'admin', phone: '+24100000000', isPremium: true, dateJoined: new Date().toISOString() },
-                    { id: 2, firstName: 'Jean', lastName: 'Chercheur', email: 'chercheur@test.com', password: 'Chercheur@123', role: 'seeker', phone: '241066001122', isPremium: false, dateJoined: new Date().toISOString() },
-                    { id: 3, firstName: 'Paul', lastName: 'Recruteur', email: 'recruteur@test.com', password: 'Recruteur@123', role: 'recruiter', company: 'Gabon Oil', whatsapp: '+241077001122', phone: '241077001122', dateJoined: new Date().toISOString() }
+                    { id: 2, firstName: 'Jean', lastName: 'Chercheur', email: 'chercheur@test.com', password: 'Chercheur@123', role: 'seeker', phone: '074001122', isPremium: false, dateJoined: new Date().toISOString() },
+                    { id: 3, firstName: 'Paul', lastName: 'Recruteur', email: 'recruteur@test.com', password: 'Recruteur@123', role: 'recruiter', company: 'Gabon Oil', whatsapp: '+241077001122', phone: '077001122', dateJoined: new Date().toISOString() }
                 ];
                 
                 this.data.jobs = [
@@ -739,7 +739,7 @@
                 }
             },
 
-            // --- MAKETOU PAYMENT INTEGRATION (CORRIGÉE) ---
+            // --- MAKETOU PAYMENT INTEGRATION (CORRIGÉE & FINALE) ---
             
             initiatePayment: async function() {
                 if (!this.data.currentUser) {
@@ -754,22 +754,30 @@
                 btn.disabled = true;
 
                 try {
-                    // 1. NETTOYAGE AGRESSIF DU TÉLÉPHONE
-                    let rawPhone = this.data.currentUser.phone.replace(/\D/g, ''); 
-                    if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
-                    if (!rawPhone.startsWith('241')) rawPhone = '241' + rawPhone;
+                    // --- CORRECTION DU NUMÉRO DE TÉLÉPHONE (IMPOSÉ PAR MAKETOU) ---
+                    // 1. On garde uniquement les chiffres (0-9)
+                    let digits = this.data.currentUser.phone.replace(/\D/g, ''); 
+                    
+                    // 2. Si le numéro commence par un "0" (ex: 077...), on l'enlève
+                    if (digits.startsWith('0')) {
+                        digits = digits.substring(1);
+                    }
+                    
+                    // 3. Si le numéro ne commence pas par "241", on l'ajoute
+                    if (!digits.startsWith('241')) {
+                        digits = '241' + digits;
+                    }
 
-                    // 2. PRÉPARATION DES DONNÉES
-                    // URL actuelle (propre)
-                    const currentUrl = window.location.href.split('?')[0]; 
-                    
-                    // Détection du mode local ou en ligne
-                    let returnUrl = currentUrl + '?page=confirmation';
-                    
-                    // Si le protocole n'est pas http/https (donc file:// ou autre)
+                    // 4. IMPORTANT : On ajoute le "+" au début pour le format international
+                    const finalPhone = '+' + digits; 
+                    // Résultat attendu : +24177001122
+                    // ------------------------------------------
+
+                    // Gestion URL (Vercel ou Local)
+                    let returnUrl = window.location.href.split('?')[0] + '?page=confirmation';
                     if (!window.location.protocol.startsWith('http')) {
-                        alert("⚠️ TEST LOCAL DÉTECTÉ\nL'API Maketou exige une URL http/https.\nAprès le paiement, vous serez redirigé vers Google.com pour valider le test.");
-                        returnUrl = "https://www.google.com";
+                        alert("⚠️ En local, redirection vers Google après paiement.");
+                        returnUrl = "https://www.google.com"; 
                     }
 
                     const payload = {
@@ -777,7 +785,7 @@
                         email: this.data.currentUser.email,
                         firstName: this.data.currentUser.firstName,
                         lastName: this.data.currentUser.lastName,
-                        phone: rawPhone, 
+                        phone: finalPhone, // On envoie le numéro avec le +
                         redirectURL: returnUrl
                     };
 
@@ -805,15 +813,23 @@
                         this.saveData();
                         window.location.href = data.redirectUrl;
                     } else {
-                        // ERREUR VISIBLE
-                        console.error("Réponse erreur:", data);
-                        alert("ERREUR MAKETOU DÉTAILLÉE :\n\n" + JSON.stringify(data, null, 2));
+                        // ERREUR
+                        console.error("Erreur Maketou:", data);
+                        // On affiche un message propre à l'utilisateur
+                        let msg = "Erreur de validation.";
+                        if(data.message && Array.isArray(data.message)) {
+                            msg = "Erreur sur le champ : " + data.message[0].property;
+                        } else if (data.message) {
+                            msg = data.message;
+                        }
+                        alert("Impossible d'initialiser le paiement : " + msg + "\n\n(Vérifiez que votre numéro de téléphone est correct)");
+                        
                         btn.innerHTML = originalText;
                         btn.disabled = false;
                     }
 
                 } catch (error) {
-                    alert("ERREUR TECHNIQUE :\n" + error.message);
+                    alert("Erreur technique : " + error.message);
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
