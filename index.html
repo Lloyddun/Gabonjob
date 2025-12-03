@@ -92,7 +92,7 @@
                 <div id="public-jobs-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     </div>
                 <div class="text-center mt-8">
-                    <button onclick="app.navigate('register')" class="bg-gabonGreen text-white px-6 py-3 rounded font-bold">Voir toutes les offres</button>
+                    <button onclick="app.navigate('auth'); app.toggleAuth('register')" class="bg-gabonGreen text-white px-6 py-3 rounded font-bold">Voir toutes les offres</button>
                 </div>
             </div>
         </section>
@@ -138,7 +138,8 @@
                             <input type="email" id="reg-email" placeholder="Email" class="w-full p-2 border rounded" required>
                         </div>
                         <div class="mb-4">
-                            <input type="tel" id="reg-phone" placeholder="Téléphone (+241...)" value="+241" class="w-full p-2 border rounded" required>
+                            <input type="tel" id="reg-phone" placeholder="Téléphone (ex: 077001122)" class="w-full p-2 border rounded" required>
+                            <p class="text-xs text-gray-500 mt-1">Numéro Mobile Money pour le paiement.</p>
                         </div>
                         <div class="mb-4">
                             <input type="password" id="reg-password" placeholder="Mot de passe" class="w-full p-2 border rounded" required>
@@ -372,9 +373,7 @@
             apiKey: 'msk_35395609d94589dfe55e846950480c47fb9f44af58f590faf6ab2bbe0a0c2014',
             baseUrl: 'https://api.maketou.net',
             productDocumentId: '0bdd242d-3ae3-4640-816e-97a5e731796b',
-            subscriptionPrice: 1000,
-            // Pour le test local, on redirige vers l'URL actuelle avec un paramètre
-            getRedirectURL: () => window.location.href.split('?')[0] + '?page=confirmation' 
+            subscriptionPrice: 1000
         };
 
         const app = {
@@ -387,11 +386,11 @@
 
             init: function() {
                 this.loadData();
-                this.checkUrlParams(); // Check if returning from payment
+                this.checkUrlParams(); 
                 this.updateUI();
             },
 
-            // --- DATA MANAGEMENT (Mock DB in LocalStorage) ---
+            // --- DATA MANAGEMENT ---
             loadData: function() {
                 const storedUsers = localStorage.getItem('gj_users');
                 const storedJobs = localStorage.getItem('gj_jobs');
@@ -399,7 +398,7 @@
                 const sessionUser = sessionStorage.getItem('gj_current_user');
 
                 if (storedUsers) this.data.users = JSON.parse(storedUsers);
-                else this.seedData(); // Create initial data if empty
+                else this.seedData(); 
 
                 if (storedJobs) this.data.jobs = JSON.parse(storedJobs);
                 if (storedTrans) this.data.transactions = JSON.parse(storedTrans);
@@ -418,14 +417,12 @@
             },
 
             seedData: function() {
-                // Default users as requested
                 this.data.users = [
                     { id: 1, firstName: 'Admin', lastName: 'System', email: 'admin@gabonjob.com', password: 'Admin@2025', role: 'admin', phone: '+24100000000', isPremium: true, dateJoined: new Date().toISOString() },
-                    { id: 2, firstName: 'Jean', lastName: 'Chercheur', email: 'chercheur@test.com', password: 'Chercheur@123', role: 'seeker', phone: '+241066001122', isPremium: false, dateJoined: new Date().toISOString() },
-                    { id: 3, firstName: 'Paul', lastName: 'Recruteur', email: 'recruteur@test.com', password: 'Recruteur@123', role: 'recruiter', company: 'Gabon Oil', whatsapp: '+241077001122', phone: '+241077001122', dateJoined: new Date().toISOString() }
+                    { id: 2, firstName: 'Jean', lastName: 'Chercheur', email: 'chercheur@test.com', password: 'Chercheur@123', role: 'seeker', phone: '241066001122', isPremium: false, dateJoined: new Date().toISOString() },
+                    { id: 3, firstName: 'Paul', lastName: 'Recruteur', email: 'recruteur@test.com', password: 'Recruteur@123', role: 'recruiter', company: 'Gabon Oil', whatsapp: '+241077001122', phone: '241077001122', dateJoined: new Date().toISOString() }
                 ];
                 
-                // Sample Jobs
                 this.data.jobs = [
                     { id: 101, recruiterId: 3, title: 'Serveur Restaurant', company: 'Gabon Oil', province: 'Estuaire', sector: 'Hôtellerie', salary: 150000, description: 'Recherche serveur dynamique pour juillet-août.', whatsapp: '+241077001122', views: 12, date: new Date().toISOString() },
                     { id: 102, recruiterId: 3, title: 'Vendeur Boutique', company: 'Gabon Oil', province: 'Ogooué-Maritime', sector: 'Commerce', salary: 120000, description: 'Vente de vêtements. Expérience souhaitée.', whatsapp: '+241077001122', views: 5, date: new Date().toISOString() }
@@ -439,7 +436,6 @@
                 const target = document.getElementById(`page-${pageId}`);
                 if (target) target.classList.remove('hidden');
                 
-                // Dynamic renders based on page
                 if (pageId === 'home') this.renderHomeStats();
                 if (pageId === 'seeker-dashboard') this.renderSeekerJobs();
                 if (pageId === 'recruiter-dashboard') this.renderRecruiterJobs();
@@ -468,15 +464,6 @@
                         <span class="text-gray-500">Bonjour, ${this.data.currentUser.firstName}</span>
                         <a href="#" onclick="app.logout()" class="text-gray-600 hover:text-red-500"><i class="fas fa-sign-out-alt"></i></a>
                     `;
-                    
-                    // Direct navigation if on home
-                    if(document.getElementById('page-home').classList.contains('hidden') === false) {
-                       // stay on home
-                    } else {
-                       if(role === 'seeker') this.navigate('seeker-dashboard');
-                       if(role === 'recruiter') this.navigate('recruiter-dashboard');
-                       if(role === 'admin') this.navigate('admin-dashboard');
-                    }
                 }
                 this.renderHomeStats();
             },
@@ -488,7 +475,6 @@
                 document.getElementById('tab-login').className = mode === 'login' ? 'flex-1 py-4 bg-gray-100 font-bold text-center border-b-2 border-gabonGreen' : 'flex-1 py-4 bg-gray-50 text-gray-500 font-bold text-center border-b border-gray-200';
                 document.getElementById('tab-register').className = mode === 'register' ? 'flex-1 py-4 bg-gray-100 font-bold text-center border-b-2 border-gabonGreen' : 'flex-1 py-4 bg-gray-50 text-gray-500 font-bold text-center border-b border-gray-200';
                 
-                // Show recruiter fields if selected
                 const radios = document.getElementsByName('reg-role');
                 radios.forEach(r => r.addEventListener('change', (e) => {
                     document.getElementById('recruiter-fields').classList.toggle('hidden', e.target.value !== 'recruiter');
@@ -552,7 +538,7 @@
             logout: function() {
                 this.data.currentUser = null;
                 this.saveData();
-                window.location.href = window.location.origin; // Reload to clean state
+                window.location.href = window.location.origin + window.location.pathname; 
             },
 
             // --- JOB SEEKER LOGIC ---
@@ -562,7 +548,6 @@
                 const filterSec = document.getElementById('filter-sector').value;
                 const isPremium = this.data.currentUser.isPremium;
 
-                // Update Profile Info
                 document.getElementById('seeker-name').textContent = `${this.data.currentUser.firstName} ${this.data.currentUser.lastName}`;
                 if(isPremium) {
                     document.getElementById('seeker-badge').innerHTML = '<span class="premium-badge px-3 py-1 rounded-full text-xs">PREMIUM ✓</span>';
@@ -579,13 +564,10 @@
 
                 filtered.forEach(job => {
                     let actions = '';
-                    let detailsClass = '';
                     let contactInfo = '';
 
                     if (isPremium) {
-                        // PREMIUM VIEW
                         const encodedText = encodeURIComponent(`Bonjour, je postule pour l'offre ${job.title} vue sur Gabonjob.`);
-                        // Cleaning phone number for link
                         const cleanPhone = job.whatsapp.replace(/\+/g, '').replace(/\s/g, '');
                         
                         actions = `
@@ -596,13 +578,11 @@
                         `;
                         contactInfo = `<p class="text-sm text-gray-600 mt-2"><strong>Contact:</strong> ${job.whatsapp}</p>`;
                     } else {
-                        // FREE VIEW (Blurred)
                         actions = `
                             <button onclick="app.initiatePayment()" class="bg-gray-300 text-gray-600 px-4 py-2 rounded cursor-pointer font-bold border border-gray-400">
                                 <i class="fas fa-lock mr-2"></i> Payer pour débloquer
                             </button>
                         `;
-                        detailsClass = 'blur-content'; // Apply blur to specific details
                     }
 
                     const html = `
@@ -624,7 +604,7 @@
                             
                             <div class="mb-4">
                                 <h4 class="font-bold text-sm mb-1">Description :</h4>
-                                <p class="text-gray-700 ${!isPremium ? 'line-clamp-2' : ''}">${job.description}</p>
+                                <p class="text-gray-700 ${!isPremium ? 'line-clamp-2 blur-content' : ''}">${job.description}</p>
                                 ${isPremium ? contactInfo : '<p class="text-red-500 text-sm mt-2 italic"><i class="fas fa-lock"></i> Détails complets réservés aux membres Premium.</p>'}
                             </div>
 
@@ -701,7 +681,7 @@
                 document.getElementById('admin-revenue').textContent = (paidUsers.length * 1000).toLocaleString() + ' FCFA';
                 document.getElementById('admin-jobs-count').textContent = this.data.jobs.length;
 
-                this.switchAdminTab('users'); // Load default tab
+                this.switchAdminTab('users'); 
             },
 
             switchAdminTab: function(tabName) {
@@ -734,7 +714,6 @@
             renderTransactions: function() {
                 const tbody = document.getElementById('admin-transactions-table');
                 tbody.innerHTML = '';
-                // Combine local storage logs with fresh API data if possible, for now display local log
                 this.data.transactions.forEach(t => {
                     tbody.innerHTML += `
                         <tr class="bg-white border-b">
@@ -760,7 +739,7 @@
                 }
             },
 
-            // --- MAKETOU PAYMENT INTEGRATION ---
+            // --- MAKETOU PAYMENT INTEGRATION (CORRIGÉE) ---
             
             initiatePayment: async function() {
                 if (!this.data.currentUser) {
@@ -769,23 +748,40 @@
                     return;
                 }
 
-                // Afficher un loader simple sur le bouton
                 const btn = event.target;
                 const originalText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion Maketou...';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traitement...';
                 btn.disabled = true;
 
                 try {
+                    // 1. NETTOYAGE AGRESSIF DU TÉLÉPHONE
+                    let rawPhone = this.data.currentUser.phone.replace(/\D/g, ''); 
+                    if (rawPhone.startsWith('0')) rawPhone = rawPhone.substring(1);
+                    if (!rawPhone.startsWith('241')) rawPhone = '241' + rawPhone;
+
+                    // 2. PRÉPARATION DES DONNÉES
+                    // URL actuelle (propre)
+                    const currentUrl = window.location.href.split('?')[0]; 
+                    
+                    // Détection du mode local ou en ligne
+                    let returnUrl = currentUrl + '?page=confirmation';
+                    
+                    // Si le protocole n'est pas http/https (donc file:// ou autre)
+                    if (!window.location.protocol.startsWith('http')) {
+                        alert("⚠️ TEST LOCAL DÉTECTÉ\nL'API Maketou exige une URL http/https.\nAprès le paiement, vous serez redirigé vers Google.com pour valider le test.");
+                        returnUrl = "https://www.google.com";
+                    }
+
                     const payload = {
                         productDocumentId: MAKETOU_CONFIG.productDocumentId,
                         email: this.data.currentUser.email,
                         firstName: this.data.currentUser.firstName,
                         lastName: this.data.currentUser.lastName,
-                        phone: this.data.currentUser.phone.replace('+', ''), // Maketou often prefers no +
-                        redirectURL: MAKETOU_CONFIG.getRedirectURL()
+                        phone: rawPhone, 
+                        redirectURL: returnUrl
                     };
 
-                    console.log("Envoi requête Maketou:", payload);
+                    console.log("Envoi à Maketou:", payload);
 
                     const response = await fetch(`${MAKETOU_CONFIG.baseUrl}/api/v1/stores/cart/checkout`, {
                         method: 'POST',
@@ -799,7 +795,7 @@
                     const data = await response.json();
                     
                     if (data.redirectUrl) {
-                        // Save pending transaction locally
+                        // SUCCÈS
                         this.data.transactions.push({
                             cartId: data.cartId || 'unknown',
                             email: this.data.currentUser.email,
@@ -807,18 +803,17 @@
                             date: new Date().toISOString()
                         });
                         this.saveData();
-
-                        // Redirect user
                         window.location.href = data.redirectUrl;
                     } else {
-                        alert("Erreur lors de l'initialisation du paiement: " + (data.message || 'Inconnue'));
+                        // ERREUR VISIBLE
+                        console.error("Réponse erreur:", data);
+                        alert("ERREUR MAKETOU DÉTAILLÉE :\n\n" + JSON.stringify(data, null, 2));
                         btn.innerHTML = originalText;
                         btn.disabled = false;
                     }
 
                 } catch (error) {
-                    console.error("Erreur paiement:", error);
-                    alert("Erreur de connexion avec Maketou. Vérifiez votre connexion.");
+                    alert("ERREUR TECHNIQUE :\n" + error.message);
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
@@ -828,8 +823,7 @@
             checkUrlParams: function() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const page = urlParams.get('page');
-                const cartId = urlParams.get('cartId'); // Maketou sends this back
-                const status = urlParams.get('status'); // Sometimes sent back
+                const cartId = urlParams.get('cartId'); 
 
                 if (page === 'confirmation' && cartId) {
                     this.navigate('payment-confirmation');
@@ -848,7 +842,6 @@
                     });
 
                     const data = await response.json();
-                    
                     const loading = document.getElementById('payment-loading');
                     const success = document.getElementById('payment-success');
                     const error = document.getElementById('payment-error');
@@ -870,31 +863,18 @@
                         const transIdx = this.data.transactions.findIndex(t => t.cartId === cartId);
                         if(transIdx !== -1) {
                             this.data.transactions[transIdx].status = 'completed';
-                            this.data.transactions[transIdx].paymentId = data.paymentId || 'N/A';
-                            this.saveData();
-                        } else {
-                            // If transaction wasn't saved before redirect (rare)
-                            this.data.transactions.push({
-                                cartId: cartId,
-                                email: this.data.currentUser ? this.data.currentUser.email : 'unknown',
-                                status: 'completed',
-                                date: new Date().toISOString()
-                            });
                             this.saveData();
                         }
-
                         success.classList.remove('hidden');
                     } else if (data.status === 'payment_failed') {
                         error.classList.remove('hidden');
-                        document.getElementById('payment-error-msg').innerText = "Le paiement a échoué ou a été annulé.";
+                        document.getElementById('payment-error-msg').innerText = "Le paiement a échoué.";
                     } else {
-                        // Still waiting
                         error.classList.remove('hidden');
-                        document.getElementById('payment-error-msg').innerText = "Statut du paiement : " + data.status;
+                        document.getElementById('payment-error-msg').innerText = "Statut: " + data.status;
                     }
 
                 } catch (err) {
-                    console.error(err);
                     document.getElementById('payment-loading').classList.add('hidden');
                     document.getElementById('payment-error').classList.remove('hidden');
                 }
@@ -909,7 +889,6 @@
                 
                 const publicList = document.getElementById('public-jobs-list');
                 publicList.innerHTML = '';
-                // Show only 3 latest jobs
                 this.data.jobs.slice(0, 3).forEach(job => {
                     publicList.innerHTML += `
                          <div class="bg-white p-6 rounded shadow border-l-4 border-gabonGreen">
